@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Algorithms Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold">ML Algorithms Showcase</h1>
+                <div class="flex space-x-4">
+                    <a href="#algorithms" class="hover:bg-blue-700 px-3 py-2 rounded transition">Algorithms</a>
+                    <a href="#comparison" class="hover:bg-blue-700 px-3 py-2 rounded transition">Comparison</a>
+                    <a href="/admin" target="_blank" class="bg-blue-800 hover:bg-blue-900 px-3 py-2 rounded transition">
+                        Admin Panel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="bg-white shadow">
+        <div class="container mx-auto px-4 py-12 text-center">
+            <h2 class="text-4xl font-bold text-gray-800 mb-4">Machine Learning Algorithms Explorer</h2>
+            <p class="text-gray-600 text-lg max-w-2xl mx-auto">
+                Discover, compare, and understand various machine learning algorithms with detailed implementations and performance metrics.
+            </p>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <div id="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p class="text-gray-600 mt-4 text-lg">Loading machine learning algorithms...</p>
+        </div>
+
+        <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg mb-6">
+            <div class="flex items-center">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <p class="font-semibold">Cannot connect to backend API</p>
+                    <p class="text-sm mt-1">Make sure the Django server is running correctly</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="algorithms-section" class="hidden">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800" id="algorithms">All Algorithms</h2>
+                <div class="flex space-x-2" id="filter-buttons">
+                    <!-- Filter buttons will be added by JavaScript -->
+                </div>
+            </div>
+
+            <div id="algorithms-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                <!-- Algorithms will be loaded here -->
+            </div>
+        </div>
+
+        <div id="comparison-section" class="hidden bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6" id="comparison">Algorithm Comparison</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <canvas id="accuracyChart" width="400" height="300"></canvas>
+                </div>
+                <div>
+                    <canvas id="typeChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="algorithm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 id="modal-title" class="text-2xl font-bold text-gray-800"></h3>
+                        <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                    </div>
+                    <div id="modal-content">
+                        <!-- Modal content will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allAlgorithms = [];
+        let currentFilter = 'all';
+
+        const typeColors = {
+            'classification': { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200' },
+            'regression': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' },
+            'clustering': { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-200' },
+            'dimensionality': { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' },
+            'neural': { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' }
+        };
+
+        async function loadAlgorithms() {
+            try {
+                const response = await fetch('/api/algorithms/');
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                allAlgorithms = await response.json();
+                displayAlgorithms();
+                createFilterButtons();
+                createCharts();
+                
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('algorithms-section').classList.remove('hidden');
+                document.getElementById('comparison-section').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error-message').classList.remove('hidden');
+            }
+        }
+
+        function displayAlgorithms() {
+            const container = document.getElementById('algorithms-container');
+            container.innerHTML = '';
+
+            const filteredAlgorithms = currentFilter === 'all' 
+                ? allAlgorithms 
+                : allAlgorithms.filter(algo => algo.algorithm_type === currentFilter);
+
+            if (filteredAlgorithms.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-12"><p class="text-gray-500 text-lg">No algorithms found for this filter.</p></div>';
+                return;
+            }
+
+            filteredAlgorithms.forEach(algo => {
+                const colors = typeColors[algo.algorithm_type] || { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-200' };
+                
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 border-l-4 ' + colors.border;
+                card.innerHTML = `
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-xl font-semibold text-gray-800">${algo.name}</h3>
+                            <span class="px-3 py-1 rounded-full text-sm font-medium ${colors.bg} ${colors.text}">
+                                ${algo.algorithm_type.replace('_', ' ')}
+                            </span>
+                        </div>
+                        
+                        <p class="text-gray-600 mb-4">${algo.short_description}</p>
+                        
+                        ${algo.accuracy ? `
+                            <div class="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
+                                <span class="text-sm text-gray-600">Accuracy:</span>
+                                <span class="text-lg font-bold text-green-600">
+                                    ${(algo.accuracy * 100).toFixed(1)}%
+                                </span>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="space-y-2 text-sm text-gray-600 mb-4">
+                            <div class="flex items-start">
+                                <span class="font-medium text-gray-700">Pros:</span> 
+                                <span class="ml-2">${algo.pros}</span>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="font-medium text-gray-700">Cons:</span> 
+                                <span class="ml-2">${algo.cons}</span>
+                            </div>
+                        </div>
+
+                        <button onclick="viewAlgorithmDetails(${algo.id})" 
+                                class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                            View Details
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function createFilterButtons() {
+            const filterContainer = document.getElementById('filter-buttons');
+            const types = ['all', ...new Set(allAlgorithms.map(algo => algo.algorithm_type))];
+            
+            filterContainer.innerHTML = types.map(type => {
+                const label = type === 'all' ? 'All' : type.replace('_', ' ');
+                const isActive = currentFilter === type;
+                return `
+                    <button onclick="setFilter('${type}')" 
+                            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                isActive 
+                                    ? 'bg-blue-500 text-white' 
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }">
+                        ${label}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function setFilter(type) {
+            currentFilter = type;
+            displayAlgorithms();
+            createFilterButtons();
+        }
+
+        function viewAlgorithmDetails(algorithmId) {
+            const algorithm = allAlgorithms.find(algo => algo.id === algorithmId);
+            if (!algorithm) return;
+
+            const colors = typeColors[algorithm.algorithm_type] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+            
+            document.getElementById('modal-title').textContent = algorithm.name;
+            document.getElementById('modal-content').innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex items-center space-x-4">
+                        <span class="px-4 py-2 rounded-full text-sm font-medium ${colors.bg} ${colors.text}">
+                            ${algorithm.algorithm_type.replace('_', ' ')}
+                        </span>
+                        ${algorithm.accuracy ? `
+                            <div class="flex items-center">
+                                <span class="text-lg font-bold text-green-600">
+                                    ${(algorithm.accuracy * 100).toFixed(1)}% Accuracy
+                                </span>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Description</h4>
+                        <p class="text-gray-600">${algorithm.short_description}</p>
+                    </div>
+
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Use Cases</h4>
+                        <p class="text-gray-600">${algorithm.use_cases}</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h4 class="text-lg font-semibold text-green-800 mb-2">✅ Pros</h4>
+                            <p class="text-green-700">${algorithm.pros}</p>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <h4 class="text-lg font-semibold text-red-800 mb-2">❌ Cons</h4>
+                            <p class="text-red-700">${algorithm.cons}</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-800 mb-2">Implementation Code</h4>
+                        <pre class="bg-gray-800 text-green-400 p-4 rounded-lg overflow-x-auto text-sm"><code>${algorithm.implementation_code}</code></pre>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('algorithm-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('algorithm-modal').classList.add('hidden');
+        }
+
+        function createCharts() {
+            const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
+            const algorithmsWithAccuracy = allAlgorithms.filter(algo => algo.accuracy);
+            
+            new Chart(accuracyCtx, {
+                type: 'bar',
+                data: {
+                    labels: algorithmsWithAccuracy.map(algo => algo.name),
+                    datasets: [{
+                        label: 'Accuracy (%)',
+                        data: algorithmsWithAccuracy.map(algo => (algo.accuracy * 100)),
+                        backgroundColor: '#3B82F6',
+                        borderColor: '#1D4ED8',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Accuracy (%)' }
+                        }
+                    }
+                }
+            });
+
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            const typeCount = {};
+            allAlgorithms.forEach(algo => {
+                typeCount[algo.algorithm_type] = (typeCount[algo.algorithm_type] || 0) + 1;
+            });
+
+            new Chart(typeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(typeCount).map(type => type.replace('_', ' ')),
+                    datasets: [{
+                        data: Object.values(typeCount),
+                        backgroundColor: ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444'],
+                        borderWidth: 1
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        document.getElementById('algorithm-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        loadAlgorithms();
+    </script>
+</body>
+</html>

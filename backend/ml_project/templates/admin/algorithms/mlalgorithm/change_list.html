@@ -1,0 +1,118 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+.algorithm-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 8px 0;
+    background: white;
+    transition: all 0.3s ease;
+}
+.algorithm-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+.algorithm-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.algorithm-name {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #1f2937;
+}
+.algorithm-type {
+    background: #3b82f6;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+}
+.algorithm-accuracy {
+    color: #10b981;
+    font-weight: bold;
+}
+.algorithm-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+.btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+.add-algorithm-btn {
+    background: #10b981;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    margin-bottom: 20px;
+    display: inline-block;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>ML Algorithms Management</h1>
+    
+    <a href="add/" class="add-algorithm-btn">
+        ➕ Add New Algorithm
+    </a>
+
+    <div class="algorithm-grid">
+        {% for algorithm in cl.result_list %}
+        <div class="algorithm-card">
+            <div class="algorithm-header">
+                <span class="algorithm-name">{{ algorithm.name }}</span>
+                <span class="algorithm-type">{{ algorithm.get_algorithm_type_display }}</span>
+            </div>
+            
+            <p>{{ algorithm.short_description|truncatewords:20 }}</p>
+            
+            <div class="algorithm-details">
+                {% if algorithm.accuracy %}
+                <span class="algorithm-accuracy">Accuracy: {{ algorithm.accuracy|floatformat:1 }}%</span>
+                {% endif %}
+                <span>Created: {{ algorithm.created_at|date:"M d, Y" }}</span>
+            </div>
+            
+            <div class="algorithm-actions">
+                <a href="{{ algorithm.id }}/change/" class="btn btn-primary">✏️ Edit</a>
+                <a href="{{ algorithm.id }}/delete/" class="btn btn-danger">🗑️ Delete</a>
+                <a href="/algorithm/{{ algorithm.id }}/" target="_blank" class="btn btn-secondary">👁️ View Live</a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="algorithm-card">
+            <p>No algorithms found. <a href="add/">Add the first algorithm</a></p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Keep the original admin pagination -->
+{{ block.super }}
+{% endblock %}
