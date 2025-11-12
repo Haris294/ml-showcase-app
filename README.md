@@ -4,12 +4,14 @@ A comprehensive web application for exploring machine learning algorithms.
 
 ## Quick Start
 
-\`\`\`bash
+```bash
+git clone git@github.com:Haris294/ml-showcase-app.git
+cd ml-showcase-app
 ./setup.sh
 cd backend
-source venv/bin/activate  
+source venv/bin/activate
 python manage.py runserver
-\`\`\`
+```
 
 ## Features
 - Algorithm catalog with 6+ ML algorithms
@@ -17,12 +19,6 @@ python manage.py runserver
 - Implementation code snippets
 - Wikipedia integration
 - Beautiful admin panel
-
-## Tech Stack
-- Django 4.2
-- Tailwind CSS
-- Chart.js
-- SQLite
 
 ## Access
 - App: http://localhost:8000/
